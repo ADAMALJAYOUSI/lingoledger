@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>LingoLedger | English Tutor Calendar & Fee Tracker (€)</title>
+  <meta name="description" content="Interactive calendar and balance tracker for private English language teachers. Track daily clients and hours, manage student debt in Euros (€), and stay organized on mobile and desktop.">
+  
+  <!-- Modern Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="style.css">
+  <!-- SheetJS for Client-Side Microsoft Excel (.xlsx) Export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+  <div class="app-layout">
+    <!-- Top Navigation Bar -->
+    <header class="top-nav" id="mainNavbar">
+      <div class="nav-brand">
+        <div class="brand-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+            <path d="m9 16 2 2 4-4"></path>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>LingoLedger</h1>
+          <span class="brand-tagline">Tutor Calendar & Fee Tracker &bull; <strong>EUR (€)</strong></span>
+        </div>
+      </div>
+
+      <!-- Main View Navigation Switcher -->
+      <div class="view-switcher-pill" role="tablist" aria-label="Main View Selector">
+        <button id="viewCalendarBtn" class="switcher-btn active" role="tab" aria-selected="true">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+            <line x1="16" y1="2" x2="16" y2="6"></line>
+            <line x1="8" y1="2" x2="8" y2="6"></line>
+            <line x1="3" y1="10" x2="21" y2="10"></line>
+          </svg>
+          <span>Calendar</span>
+        </button>
+        <button id="viewClientsBtn" class="switcher-btn" role="tab" aria-selected="false">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"></path>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"></path>
+          </svg>
+          <span>Clients & Balances</span>
+          <span class="badge-owes-count" id="navOwesCountBadge">0</span>
+        </button>
+      </div>
+
+      <!-- Right Header Actions -->
+      <div class="nav-actions">
+        <!-- Currency Indicator (Fixed to Euro) -->
+        <div class="euro-badge" title="Currency is strictly Euro (€)">
+          <span class="euro-symbol">€</span>
+          <span class="euro-label">EUR</span>
+        </div>
+
+        <!-- Cloud Sheet / Excel API Sync Status Pill -->
+        <button id="cloudSyncBtn" class="cloud-sync-pill unlinked" title="Connect Google Sheets & Excel Cloud API" aria-label="Cloud Sync">
+          <span class="cloud-status-dot"></span>
+          <span class="cloud-sync-label">Cloud Sheet</span>
+        </button>
+
+        <!-- Theme Toggle -->
+        <button id="themeToggleBtn" class="nav-icon-btn" title="Toggle Light/Dark Theme" aria-label="Toggle theme">
+          <span class="sun-icon">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="5"></circle>
+              <line x1="12" y1="1" x2="12" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="23"></line>
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+              <line x1="1" y1="12" x2="3" y2="12"></line>
+              <line x1="21" y1="12" x2="23" y2="12"></line>
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+            </svg>
+          </span>
+          <span class="moon-icon">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+            </svg>
+          </span>
+        </button>
+
+        <!-- Dropdown / Data Menu -->
+        <div class="dropdown-container">
+          <button id="optionsDropdownBtn" class="nav-icon-btn" title="Backup & Demo Options" aria-label="Options">
+            <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="1.5"></circle>
+              <circle cx="12" cy="5" r="1.5"></circle>
+              <circle cx="12" cy="19" r="1.5"></circle>
+            </svg>
+          </button>
+          <div id="optionsDropdownMenu" class="dropdown-menu hidden">
+            <button id="openCloudModalFromMenu" class="dropdown-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg>
+              Google Sheets / Excel Cloud API
+            </button>
+            <button id="exportExcelBtn" class="dropdown-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+              Download Excel Workbook (.xlsx)
+            </button>
+            <button id="loadSampleDataBtn" class="dropdown-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
+              Load Sample Clients & Calendar
+            </button>
+            <button id="exportDataBtn" class="dropdown-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              Export Backup (JSON)
+            </button>
+            <button id="exportCsvBtn" class="dropdown-item">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+              Export Clients List (CSV)
+            </button>
+            <label class="dropdown-item file-import-label">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+              Import Backup (JSON)
+              <input type="file" id="importFileInput" accept=".json" style="display:none;">
+            </label>
+            <hr class="dropdown-divider">
+            <button id="clearAllDataBtn" class="dropdown-item text-danger">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+              Clear All Data
+            </button>
+          </div>
+        </div>
+
+        <!-- Primary CTA button (Desktop) -->
+        <button id="primaryAddHoursBtn" class="btn btn-primary desktop-only">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          <span>Add Hours</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Container -->
+    <main class="main-container">
+      
+      <!-- Views Sliding Wrapper -->
+      <div class="views-viewport" id="viewsViewport">
+
+        <!-- ========================================================
+             VIEW 1: CALENDAR VIEW (Primary)
+             ======================================================== -->
+        <section id="calendarViewSection" class="view-section active">
+          <!-- Monthly Financial & Hours Ribbon -->
+          <div class="calendar-summary-ribbon">
+            <div class="summary-pill highlight-pill">
+              <div class="pill-icon danger-glow">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+              </div>
+              <div class="pill-text">
+                <span class="pill-label">Total Debt Owed to You</span>
+                <strong class="pill-value text-danger" id="calTotalOwed">€0.00</strong>
+              </div>
+            </div>
+
+            <div class="summary-pill">
+              <div class="pill-icon success-glow">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="5" width="20" height="14" rx="2"></rect><line x1="2" y1="10" x2="22" y2="10"></line></svg>
+              </div>
+              <div class="pill-text">
+                <span class="pill-label">Total Collected (€)</span>
+                <strong class="pill-value text-success" id="calTotalPaid">€0.00</strong>
+              </div>
+            </div>
+
+            <div class="summary-pill">
+              <div class="pill-icon accent-glow">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+              </div>
+              <div class="pill-text">
+                <span class="pill-label">Month Teaching Hours</span>
+                <strong class="pill-value text-accent" id="calMonthHours">0.0 hrs</strong>
+              </div>
+            </div>
+
+            <div class="summary-pill">
+              <div class="pill-icon primary-glow">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
+              </div>
+              <div class="pill-text">
+                <span class="pill-label">Active Clients</span>
+                <strong class="pill-value" id="calActiveClients">0</strong>
+              </div>
+            </div>
+          </div>
+
+          <!-- Calendar Container Layout (Grid + Day Inspector) -->
+          <div class="calendar-workspace">
+            <!-- Calendar Main Panel -->
+            <div class="calendar-card" id="calendarCard">
+              <!-- Calendar Navigation Header -->
+              <div class="calendar-nav-bar">
+                <div class="cal-month-title-wrap">
+                  <h2 id="calendarMonthTitle" class="calendar-month-title">September 2026</h2>
+                  <span class="cal-badge-month-total" id="calMonthIncomeBadge">€0.00 billed</span>
+                </div>
+                <div class="cal-nav-buttons">
+                  <button id="prevMonthBtn" class="cal-nav-btn" aria-label="Previous Month">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                  </button>
+                  <button id="todayBtn" class="btn btn-sm btn-secondary cal-today-btn">Today</button>
+                  <button id="nextMonthBtn" class="cal-nav-btn" aria-label="Next Month">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"></polyline></svg>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Day-of-Week Header -->
+              <div class="calendar-weekdays-row">
+                <div class="weekday-col">Mon</div>
+                <div class="weekday-col">Tue</div>
+                <div class="weekday-col">Wed</div>
+                <div class="weekday-col">Thu</div>
+                <div class="weekday-col">Fri</div>
+                <div class="weekday-col weekend">Sat</div>
+                <div class="weekday-col weekend">Sun</div>
+              </div>
+
+              <!-- Calendar Days Viewport (for sliding transitions) -->
+              <div class="calendar-viewport" id="calendarViewport">
+                <div id="calendarDaysGrid" class="calendar-days-grid" role="grid">
+                  <!-- Dynamically populated by app.js -->
+                </div>
+              </div>
+
+              <!-- Touch swipe gesture hint -->
+              <div class="calendar-swipe-hint">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+                <span>Swipe left / right to change months</span>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+              </div>
+            </div>
+
+            <!-- Selected Day Inspector Drawer / Agenda Panel -->
+            <aside class="day-inspector-card" id="dayInspectorCard">
+              <div class="day-inspector-header">
+                <div>
+                  <span class="inspector-super-title" id="inspectorDayOfWeek">Selected Day</span>
+                  <h3 class="inspector-date-title" id="inspectorDateTitle">12 September 2026</h3>
+                </div>
+                <button id="inspectorAddHoursBtn" class="btn btn-sm btn-primary">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                  <span>Add Hours</span>
+                </button>
+              </div>
+
+              <div class="inspector-stats-row">
+                <div class="stat-mini">
+                  <span class="stat-mini-label">Hours Taught</span>
+                  <span class="stat-mini-val text-accent" id="inspectorDayHours">0.0 hrs</span>
+                </div>
+                <div class="stat-mini">
+                  <span class="stat-mini-label">Billed Amount</span>
+                  <span class="stat-mini-val" id="inspectorDayBilled">€0.00</span>
+                </div>
+                <div class="stat-mini">
+                  <span class="stat-mini-label">Unpaid / Debt</span>
+                  <span class="stat-mini-val text-danger" id="inspectorDayUnpaid">€0.00</span>
+                </div>
+              </div>
+
+              <div class="inspector-sessions-list" id="inspectorSessionsList">
+                <!-- Dynamically populated sessions for selected day -->
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- ========================================================
+             VIEW 2: CLIENTS & BALANCES VIEW (Roster & Debt)
+             ======================================================== -->
+        <section id="clientsViewSection" class="view-section hidden">
+          <!-- Client Toolbar & Filters -->
+          <div class="clients-toolbar">
+            <div class="clients-search-box">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <input type="text" id="clientSearchInput" placeholder="Search client by name, level, email...">
+              <button id="clearClientSearchBtn" class="icon-btn-inline hidden" title="Clear search">✕</button>
+            </div>
+
+            <div class="client-filter-pills">
+              <button class="filter-tab active" data-client-filter="all" id="filterClientsAll">
+                All Clients <span class="tab-badge" id="badgeClientsAll">0</span>
+              </button>
+              <button class="filter-tab danger-tab" data-client-filter="owes" id="filterClientsOwes">
+                <span class="indicator-dot red-dot"></span> Owes Money <span class="tab-badge" id="badgeClientsOwes">0</span>
+              </button>
+              <button class="filter-tab success-tab" data-client-filter="settled" id="filterClientsSettled">
+                <span class="indicator-dot green-dot"></span> Settled Up <span class="tab-badge" id="badgeClientsSettled">0</span>
+              </button>
+              <button class="filter-tab credit-tab" data-client-filter="credit" id="filterClientsCredit">
+                <span class="indicator-dot blue-dot"></span> Has Credit <span class="tab-badge" id="badgeClientsCredit">0</span>
+              </button>
+            </div>
+
+            <div class="clients-actions-right">
+              <button id="addNewClientBtn" class="btn btn-primary">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <line x1="12" y1="5" x2="12" y2="19"></line>
+                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                </svg>
+                <span>Add Client</span>
+              </button>
+              <button id="recordPaymentGlobalBtn" class="btn btn-secondary-success">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="2" y="5" width="20" height="14" rx="2"></rect>
+                  <line x1="2" y1="10" x2="22" y2="10"></line>
+                </svg>
+                <span>Log Payment (€)</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Clients Roster Grid -->
+          <div id="clientsRosterGrid" class="students-grid" aria-live="polite">
+            <!-- Dynamically populated by app.js -->
+          </div>
+
+          <!-- Empty state for clients view -->
+          <div id="clientsEmptyState" class="empty-state hidden">
+            <div class="empty-icon-bubble">
+              <svg width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+                <circle cx="9" cy="7" r="4"></circle>
+              </svg>
+            </div>
+            <h3>No Clients Found</h3>
+            <p>Add your first private English lesson client to start tracking their hours and balances.</p>
+            <button id="emptyClientsAddBtn" class="btn btn-primary">Add First Client</button>
+          </div>
+        </section>
+
+      </div> <!-- end views-viewport -->
+
+    </main>
+
+    <!-- Mobile Bottom Navigation Bar (Centered button logs hours; no duplicate FAB) -->
+    <nav class="mobile-bottom-nav" aria-label="Mobile Navigation">
+      <button id="mobileNavCalendar" class="mobile-nav-item active">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+        </svg>
+        <span>Calendar</span>
+      </button>
+
+      <button id="mobileNavAddHours" class="mobile-nav-item mobile-nav-center-btn">
+        <div class="center-btn-bubble">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#ffffff" stroke-width="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+        </div>
+        <span>Log Hours</span>
+      </button>
+
+      <button id="mobileNavClients" class="mobile-nav-item">
+        <div class="mobile-badge-wrap">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path>
+            <circle cx="9" cy="7" r="4"></circle>
+          </svg>
+          <span class="mobile-red-dot hidden" id="mobileOwesBadgeDot"></span>
+        </div>
+        <span>Clients</span>
+      </button>
+    </nav>
+  </div>
+
+  <!-- ==================== MODALS ==================== -->
+
+  <!-- 1. Add Hours to Day Modal -->
+  <div id="addHoursModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="addHoursModalTitle">
+    <div class="modal-box modal-md">
+      <div class="modal-drag-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <h2 id="addHoursModalTitle">Log Client Lesson Hours</h2>
+        <button type="button" class="modal-close-btn" data-close-modal="addHoursModal" aria-label="Close modal">✕</button>
+      </div>
+      <form id="addHoursForm">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="hoursClientSelect">Client / Student <span class="req">*</span></label>
+            <select id="hoursClientSelect" required class="styled-select">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="hoursDateInput">Session Date <span class="req">*</span></label>
+            <input type="date" id="hoursDateInput" required>
+          </div>
+
+          <div class="form-group">
+            <label for="hoursDurationSelect">Hours Completed <span class="req">*</span></label>
+            <select id="hoursDurationSelect" class="styled-select">
+              <option value="0.5">0.5 hour (30 mins)</option>
+              <option value="0.75">0.75 hour (45 mins)</option>
+              <option value="1.0" selected>1.0 hour (60 mins)</option>
+              <option value="1.25">1.25 hours (75 mins)</option>
+              <option value="1.5">1.5 hours (90 mins)</option>
+              <option value="2.0">2.0 hours (120 mins)</option>
+              <option value="2.5">2.5 hours (150 mins)</option>
+              <option value="3.0">3.0 hours (180 mins)</option>
+            </select>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="hoursFeeInput">Session Fee to Charge (€) <span class="req">*</span></label>
+            <div class="input-prefix-wrap">
+              <span class="curr-prefix">€</span>
+              <input type="number" id="hoursFeeInput" required min="0" step="0.5" placeholder="0.00">
+            </div>
+            <small class="form-hint" id="hoursCalculatedRateHint">Auto-calculated: 1.0 hr × €35.00/hr = €35.00</small>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="hoursTopicInput">Lesson Topic / Focus Area</label>
+            <input type="text" id="hoursTopicInput" placeholder="e.g. IELTS Writing Task 1, Business Email Etiquette">
+          </div>
+
+          <div class="form-group full-width">
+            <label class="checkbox-label">
+              <input type="checkbox" id="hoursPaidCheckbox">
+              <span>Mark this lesson as already paid right now in cash / transfer</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="addHoursModal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveHoursBtn">Record Lesson Hours</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 2. Add / Edit Client Modal -->
+  <div id="clientModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="clientModalTitle">
+    <div class="modal-box modal-md">
+      <div class="modal-drag-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <h2 id="clientModalTitle">Add New Client</h2>
+        <button type="button" class="modal-close-btn" data-close-modal="clientModal" aria-label="Close modal">✕</button>
+      </div>
+      <form id="clientForm">
+        <input type="hidden" id="clientEditId" value="">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="clientNameInput">Client Full Name <span class="req">*</span></label>
+            <input type="text" id="clientNameInput" required placeholder="e.g. Maria Gonzalez" autocomplete="off">
+          </div>
+
+          <div class="form-group">
+            <label for="clientRateInput">Hourly Rate (€) <span class="req">*</span></label>
+            <div class="input-prefix-wrap">
+              <span class="curr-prefix">€</span>
+              <input type="number" id="clientRateInput" required min="0" step="0.5" value="35.00">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="clientLevelSelect">English Focus / Level</label>
+            <select id="clientLevelSelect" class="styled-select">
+              <option value="General English">General English</option>
+              <option value="Conversational / Fluency">Conversational / Fluency</option>
+              <option value="IELTS Preparation">IELTS Preparation</option>
+              <option value="TOEFL / Cambridge Exam">TOEFL / Cambridge Exam</option>
+              <option value="Business English">Business English</option>
+              <option value="Grammar & Writing">Grammar & Writing</option>
+              <option value="Kids & Teens English">Kids & Teens English</option>
+              <option value="Beginner (A1-A2)">Beginner (A1-A2)</option>
+              <option value="Intermediate (B1-B2)">Intermediate (B1-B2)</option>
+              <option value="Advanced (C1-C2)">Advanced (C1-C2)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="clientPhoneInput">Phone / WhatsApp</label>
+            <input type="tel" id="clientPhoneInput" placeholder="e.g. +34 612 345 678">
+          </div>
+
+          <div class="form-group">
+            <label for="clientEmailInput">Email Address</label>
+            <input type="email" id="clientEmailInput" placeholder="maria.g@example.com">
+          </div>
+
+          <div class="form-group full-width" id="clientInitialBalanceGroup">
+            <label for="clientInitialBalanceInput">Initial Debt Owed (€)</label>
+            <div class="input-prefix-wrap">
+              <span class="curr-prefix">€</span>
+              <input type="number" id="clientInitialBalanceInput" step="0.5" value="0">
+            </div>
+            <small class="form-hint">Enter positive amount if client already owes you for past lessons (0 if starting fresh).</small>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="clientNotesInput">Notes / Goals</label>
+            <textarea id="clientNotesInput" rows="2" placeholder="e.g. Targets B2 exam in November, prefers Tuesdays 18:00"></textarea>
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="clientModal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="saveClientBtn">Save Client</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 3. Record Payment Modal -->
+  <div id="paymentModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="paymentModalTitle">
+    <div class="modal-box modal-md">
+      <div class="modal-drag-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <h2 id="paymentModalTitle">Record Client Payment (€)</h2>
+        <button type="button" class="modal-close-btn" data-close-modal="paymentModal" aria-label="Close modal">✕</button>
+      </div>
+      <form id="paymentForm">
+        <div class="form-grid">
+          <div class="form-group full-width">
+            <label for="paymentClientSelect">Client Paying <span class="req">*</span></label>
+            <select id="paymentClientSelect" required class="styled-select">
+              <!-- Dynamically populated -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="paymentDateInput">Payment Date <span class="req">*</span></label>
+            <input type="date" id="paymentDateInput" required>
+          </div>
+
+          <div class="form-group">
+            <label for="paymentAmountInput">Amount Received (€) <span class="req">*</span></label>
+            <div class="input-prefix-wrap">
+              <span class="curr-prefix">€</span>
+              <input type="number" id="paymentAmountInput" required min="0.01" step="0.5" placeholder="0.00">
+            </div>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="paymentMethodSelect">Payment Method</label>
+            <select id="paymentMethodSelect" class="styled-select">
+              <option value="Bank Transfer / SEPA">Bank Transfer / SEPA</option>
+              <option value="Cash">Cash in hand</option>
+              <option value="Bizum / Revolut">Bizum / Revolut</option>
+              <option value="PayPal">PayPal</option>
+              <option value="Credit / Debit Card">Credit / Debit Card</option>
+              <option value="Other">Other</option>
+            </select>
+          </div>
+
+          <div class="form-group full-width">
+            <label for="paymentNotesInput">Notes / Reference</label>
+            <input type="text" id="paymentNotesInput" placeholder="e.g. Paid for 4 lessons via bank transfer">
+          </div>
+        </div>
+
+        <div class="modal-footer">
+          <button type="button" class="btn btn-secondary" data-close-modal="paymentModal">Cancel</button>
+          <button type="submit" class="btn btn-primary" id="savePaymentBtn">Record Payment</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 4. Client Ledger & History Modal -->
+  <div id="historyModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="historyClientName">
+    <div class="modal-box modal-lg">
+      <div class="modal-drag-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <div>
+          <h2 id="historyClientName">Client Ledger</h2>
+          <span class="history-sub-info" id="historyClientMeta">Level &bull; €35.00/hr</span>
+        </div>
+        <button type="button" class="modal-close-btn" data-close-modal="historyModal" aria-label="Close modal">✕</button>
+      </div>
+
+      <div class="history-summary-strip">
+        <div class="strip-item">
+          <span class="strip-label">Current Balance</span>
+          <span class="strip-val font-bold" id="historyCurrentBalance">€0.00</span>
+        </div>
+        <div class="strip-item">
+          <span class="strip-label">Hours Done</span>
+          <span class="strip-val text-accent" id="historyTotalHours">0.0 hrs</span>
+        </div>
+        <div class="strip-item">
+          <span class="strip-label">Total Billed</span>
+          <span class="strip-val" id="historyTotalBilled">€0.00</span>
+        </div>
+        <div class="strip-item">
+          <span class="strip-label">Total Paid</span>
+          <span class="strip-val text-success" id="historyTotalPaid">€0.00</span>
+        </div>
+      </div>
+
+      <div class="history-controls">
+        <div class="history-tabs">
+          <button class="history-tab active" data-tab="all" id="historyTabAll">All Records</button>
+          <button class="history-tab" data-tab="lessons" id="historyTabLessons">Lessons Only</button>
+          <button class="history-tab" data-tab="payments" id="historyTabPayments">Payments Only</button>
+        </div>
+        <div class="history-quick-btns">
+          <button class="btn btn-sm btn-secondary" id="historyAddLessonBtn">Add Hours</button>
+          <button class="btn btn-sm btn-secondary-success" id="historyAddPaymentBtn">Add Payment (€)</button>
+        </div>
+      </div>
+
+      <div class="history-timeline" id="historyTimelineList">
+        <!-- Dynamically rendered timeline items -->
+      </div>
+
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal="historyModal">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. WhatsApp / SMS Reminder Modal (Euro Only) -->
+  <div id="reminderModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="reminderModalTitle">
+    <div class="modal-box modal-md">
+      <div class="modal-drag-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <h2 id="reminderModalTitle">Payment Reminder Message (€)</h2>
+        <button type="button" class="modal-close-btn" data-close-modal="reminderModal" aria-label="Close modal">✕</button>
+      </div>
+      <div class="reminder-content">
+        <p class="form-hint" style="margin-bottom: 12px;">
+          Send this polite balance reminder to <strong id="reminderClientName">Client</strong> via WhatsApp or SMS:
+        </p>
+
+        <div class="reminder-template-picker">
+          <label for="reminderTemplateSelect">Tone:</label>
+          <select id="reminderTemplateSelect" class="styled-select-sm">
+            <option value="friendly">Friendly & Casual (Default)</option>
+            <option value="polite_formal">Polite & Professional</option>
+            <option value="short">Short & Direct</option>
+          </select>
+        </div>
+
+        <textarea id="reminderMessageText" class="reminder-textarea" rows="6"></textarea>
+
+        <div class="reminder-actions-row">
+          <button type="button" class="btn btn-secondary" id="copyReminderBtn">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+            <span>Copy Text</span>
+          </button>
+          <a id="whatsappSendLink" href="#" target="_blank" rel="noopener noreferrer" class="btn btn-whatsapp">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981zm11.387-5.464c-.074-.124-.272-.198-.57-.347-.297-.149-1.758-.868-2.031-.967-.272-.099-.47-.149-.669.149-.198.297-.768.967-.941 1.165-.173.198-.347.223-.644.074-.297-.149-1.255-.462-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.297-.347.446-.521.151-.172.2-.296.3-.495.099-.198.05-.372-.025-.521-.075-.148-.669-1.611-.916-2.206-.242-.579-.487-.501-.669-.51l-.57-.01c-.198 0-.52.074-.792.372s-1.04 1.016-1.04 2.479 1.065 2.876 1.213 3.074c.149.198 2.095 3.2 5.076 4.487.709.306 1.263.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.695.248-1.29.173-1.414z"/>
+            </svg>
+            <span>Open in WhatsApp</span>
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Delete Client Modal -->
+  <div id="deleteModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="deleteModalTitle">
+    <div class="modal-box modal-sm">
+      <div class="modal-drag-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <h2 id="deleteModalTitle" class="text-danger">Remove Client</h2>
+        <button type="button" class="modal-close-btn" data-close-modal="deleteModal" aria-label="Close modal">✕</button>
+      </div>
+      <div class="delete-modal-body">
+        <p>Are you sure you want to remove <strong id="deleteClientName">this client</strong>?</p>
+        <p class="delete-warning-text">All lesson logs, hours, and payment records for this client will be permanently deleted.</p>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-close-modal="deleteModal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteClientBtn">Yes, Remove Client</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 7. Google Sheets & Excel Cloud API Modal -->
+  <div id="cloudSyncModal" class="modal-overlay hidden" role="dialog" aria-modal="true" aria-labelledby="cloudModalTitle">
+    <div class="modal-box modal-md">
+      <div class="modal-drag-handle" aria-hidden="true"></div>
+      <div class="modal-header">
+        <div class="modal-header-icon-title">
+          <div class="modal-icon-badge cloud-badge-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path>
+            </svg>
+          </div>
+          <div>
+            <h2 id="cloudModalTitle">Google Sheets & Excel Cloud API</h2>
+            <span class="modal-subtitle">100% Free Forever • Zero Disk Storage Required</span>
+          </div>
+        </div>
+        <button type="button" class="modal-close-btn" data-close-modal="cloudSyncModal" aria-label="Close modal">✕</button>
+      </div>
+
+      <div class="cloud-modal-body">
+        <!-- Status Banner -->
+        <div id="cloudStatusBanner" class="cloud-status-banner unlinked">
+          <div class="cloud-banner-icon">
+            <span id="cloudStatusEmoji">⚪</span>
+          </div>
+          <div class="cloud-banner-info">
+            <strong id="cloudStatusTitle">Not Connected to Google Sheets</strong>
+            <p id="cloudStatusDesc">Paste your deployed Google Apps Script Web App URL below to enable permanent, automatic cloud storage.</p>
+          </div>
+        </div>
+
+        <!-- Quick Links (shown when linked) -->
+        <div id="cloudLinksRow" class="cloud-links-row hidden">
+          <a id="openGoogleSheetLink" href="#" target="_blank" rel="noopener" class="btn btn-secondary-accent btn-sm">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"></path><polyline points="15 3 21 3 21 9"></polyline><line x1="10" y1="14" x2="21" y2="3"></line></svg>
+            <span>Open Google Sheet ↗</span>
+          </a>
+          <a id="downloadExcelLink" href="#" target="_blank" rel="noopener" class="btn btn-secondary-success btn-sm">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Download as Excel (.xlsx)</span>
+          </a>
+        </div>
+
+        <!-- URL Input -->
+        <div class="form-group" style="margin-top: 6px;">
+          <label for="appsScriptUrlInput">Apps Script Web App URL (/exec)</label>
+          <div class="input-with-action">
+            <input type="url" id="appsScriptUrlInput" class="form-input" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off" spellcheck="false">
+            <button type="button" id="saveAndTestCloudBtn" class="btn btn-primary">Connect &amp; Sync</button>
+          </div>
+          <span class="field-hint">Paste the URL from Apps Script: <em>Deploy &gt; New deployment &gt; Web app &gt; Anyone</em>.</span>
+        </div>
+
+        <!-- Action Sync Buttons -->
+        <div class="cloud-actions-grid">
+          <button type="button" id="pushToCloudBtn" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+            <span>Upload Local to Cloud</span>
+          </button>
+          <button type="button" id="pullFromCloudBtn" class="btn btn-secondary">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+            <span>Pull Cloud to App</span>
+          </button>
+        </div>
+
+        <!-- Direct Instant Excel Download (.xlsx) -->
+        <div class="instant-excel-box">
+          <div class="excel-box-info">
+            <strong>Direct Excel (.xlsx) Export</strong>
+            <span>Generate an offline Excel spreadsheet file anytime right here.</span>
+          </div>
+          <button type="button" id="directExcelExportBtn" class="btn btn-sm btn-secondary-success">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="3" y1="15" x2="21" y2="15"></line><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+            <span>Export .xlsx</span>
+          </button>
+        </div>
+
+        <!-- Collapsible 60-second setup guide -->
+        <details class="setup-guide-details">
+          <summary><strong>How to deploy your free Apps Script in 60 seconds</strong></summary>
+          <ol class="setup-steps-list">
+            <li>Open your script: <a href="https://script.google.com/u/0/home/projects/1qNIRfrd__XhAUSkxJ9gM55bmhC1_-DBtxvJmizmkWOZ-omDvhTCW6ICs/edit" target="_blank" rel="noopener" class="text-accent" style="text-decoration: underline;">Open Google Apps Script Project ↗</a></li>
+            <li>Select all in <code>Code.gs</code>, replace it with the provided script, then click <strong>Save</strong> (floppy disk icon).</li>
+            <li>Click <strong>Deploy &gt; New deployment</strong> (blue button top-right).</li>
+            <li>Click gear icon next to "Select type" &gt; choose <strong>Web app</strong>.</li>
+            <li>Execute as: <strong>Me</strong> &bull; Who has access: <strong>Anyone</strong> (crucial).</li>
+            <li>Click <strong>Deploy</strong>, grant permissions, and copy the <strong>Web app URL</strong> into the input box above!</li>
+          </ol>
+        </details>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
