@@ -17,7 +17,7 @@
 
   // Built-in Google Apps Script Cloud Database Endpoint (/exec)
   // Once deployed, this URL acts as the seamless background database for all users
-  const BUILTIN_BACKEND_URL = '';
+  const BUILTIN_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbwK_b0hKZNycQBUOtmZPQDZ9jsLmIdZl88ZgmQDOYfD38PPxoCjC065_mquc1DzSGsG-A/exec';
 
   // App State
   let appSettings = {
