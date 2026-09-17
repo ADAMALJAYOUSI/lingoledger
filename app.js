@@ -81,19 +81,21 @@
   // INITIALIZATION
   // ==========================================
 
-  async function initApp() {
+  function initApp() {
     loadFromLocalStorage();
     setupTheme();
-    updateCloudSyncUI('syncing');
+    updateCloudSyncUI('linked');
     setupEventListeners();
     setupSwipeGestures();
 
-    // Render immediately from cache so the interface is snappy
+    // Render 100% instantly from cache (0ms delay)
     renderAll();
 
-    // Always fetch latest authoritative data from Google Sheets database
+    // Check for remote database updates silently in the background without blocking the UI
     if (cloudSettings.webAppUrl) {
-      await fetchFromCloud(false);
+      setTimeout(() => {
+        fetchFromCloud(false);
+      }, 150);
     }
   }
 
@@ -130,11 +132,10 @@
   let cloudAutoSyncTimer = null;
   function triggerAutoCloudSync() {
     if (!cloudSettings.webAppUrl || !cloudSettings.autoSync) return;
-    updateCloudSyncUI('syncing');
     if (cloudAutoSyncTimer) clearTimeout(cloudAutoSyncTimer);
     cloudAutoSyncTimer = setTimeout(() => {
       syncToCloud('syncAll', null, false);
-    }, 350);
+    }, 600);
   }
 
   function saveToLocalStorage(triggerSync = true) {
@@ -1719,7 +1720,9 @@
   async function fetchFromCloud(showFeedback = true) {
     if (!cloudSettings.webAppUrl) return null;
     try {
-      updateCloudSyncUI('syncing');
+      if (showFeedback) {
+        updateCloudSyncUI('syncing');
+      }
       const sep = cloudSettings.webAppUrl.includes('?') ? '&' : '?';
       const res = await fetch(`${cloudSettings.webAppUrl}${sep}action=read&t=${Date.now()}`, {
         method: 'GET',
@@ -1753,9 +1756,11 @@
       }
     } catch (err) {
       console.warn('Fetch from cloud error:', err);
-      updateCloudSyncUI('error');
       if (showFeedback) {
+        updateCloudSyncUI('error');
         showToast('Could not fetch from database. Using local copy.', 'warning');
+      } else {
+        updateCloudSyncUI('linked');
       }
       return null;
     }
