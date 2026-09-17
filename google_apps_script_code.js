@@ -58,6 +58,31 @@ function doGet(e) {
       });
     }
 
+    // Optional GET sync for maximum browser compatibility
+    if (action === 'syncAll' && e && e.parameter && e.parameter.payload) {
+      var payload = JSON.parse(e.parameter.payload);
+      var syncClientsSheet = getOrCreateSheet(ss, 'Clients');
+      var syncTxSheet = getOrCreateSheet(ss, 'Transactions');
+
+      if (Array.isArray(payload.students)) {
+        writeStudentsToSheet(syncClientsSheet, payload.students, payload.transactions || []);
+      }
+      if (Array.isArray(payload.transactions)) {
+        writeTransactionsToSheet(syncTxSheet, payload.transactions, payload.students || []);
+      }
+
+      return jsonResponse({
+        status: 'success',
+        message: 'Spreadsheet synchronized successfully!',
+        spreadsheetId: ss.getId(),
+        spreadsheetUrl: ss.getUrl(),
+        excelExportUrl: getExcelExportUrl(ss.getId()),
+        clientCount: (payload.students || []).length,
+        transactionCount: (payload.transactions || []).length,
+        timestamp: new Date().toISOString()
+      });
+    }
+
     // Default: read all clients and transactions
     var clientsSheet = getOrCreateSheet(ss, 'Clients');
     var txSheet = getOrCreateSheet(ss, 'Transactions');
@@ -154,7 +179,9 @@ function getOrCreateSpreadsheet() {
 
   if (savedId) {
     try {
-      return SpreadsheetApp.openById(savedId);
+      var existingSs = SpreadsheetApp.openById(savedId);
+      existingSs.getName(); // verify spreadsheet is accessible and valid
+      return existingSs;
     } catch (e) {
       // If deleted or inaccessible, will create a fresh one below
     }

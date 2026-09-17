@@ -16,8 +16,10 @@
   const CURRENCY_SYMBOL = '€';
 
   // Built-in Google Apps Script Cloud Database Endpoint (/exec)
-  // Once deployed, this URL acts as the seamless background database for all users
+  // Acts as the authoritative cloud database for all devices and users
   const BUILTIN_BACKEND_URL = 'https://script.google.com/macros/s/AKfycbwK_b0hKZNycQBUOtmZPQDZ9jsLmIdZl88ZgmQDOYfD38PPxoCjC065_mquc1DzSGsG-A/exec';
+  const BUILTIN_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1T3dxb81HWJGg7-100EwT7hCQsrpB8u5XvjPeu3JGeTc/edit';
+  const BUILTIN_EXCEL_URL = 'https://docs.google.com/spreadsheets/d/1T3dxb81HWJGg7-100EwT7hCQsrpB8u5XvjPeu3JGeTc/export?format=xlsx';
 
   // App State
   let appSettings = {
@@ -25,9 +27,9 @@
   };
 
   let cloudSettings = {
-    webAppUrl: BUILTIN_BACKEND_URL || '',
-    spreadsheetUrl: '',
-    excelExportUrl: '',
+    webAppUrl: BUILTIN_BACKEND_URL,
+    spreadsheetUrl: BUILTIN_SHEET_URL,
+    excelExportUrl: BUILTIN_EXCEL_URL,
     lastSynced: null,
     autoSync: true
   };
@@ -79,18 +81,19 @@
   // INITIALIZATION
   // ==========================================
 
-  function initApp() {
+  async function initApp() {
     loadFromLocalStorage();
     setupTheme();
-    updateCloudSyncUI();
+    updateCloudSyncUI('syncing');
     setupEventListeners();
     setupSwipeGestures();
 
+    // Render immediately from cache so the interface is snappy
     renderAll();
 
-    // If cloud is connected, check for remote updates in background
+    // Always fetch latest authoritative data from Google Sheets database
     if (cloudSettings.webAppUrl) {
-      fetchFromCloud(false);
+      await fetchFromCloud(false);
     }
   }
 
@@ -102,6 +105,9 @@
       const savedCloud = localStorage.getItem(STORAGE_KEY_CLOUD);
       if (savedCloud) cloudSettings = Object.assign(cloudSettings, JSON.parse(savedCloud));
       if (BUILTIN_BACKEND_URL) cloudSettings.webAppUrl = BUILTIN_BACKEND_URL;
+      if (BUILTIN_SHEET_URL && !cloudSettings.spreadsheetUrl) cloudSettings.spreadsheetUrl = BUILTIN_SHEET_URL;
+      if (BUILTIN_EXCEL_URL && !cloudSettings.excelExportUrl) cloudSettings.excelExportUrl = BUILTIN_EXCEL_URL;
+      cloudSettings.autoSync = true;
 
       const savedStudents = localStorage.getItem(STORAGE_KEY_STUDENTS);
       if (savedStudents) students = JSON.parse(savedStudents);
@@ -124,18 +130,21 @@
   let cloudAutoSyncTimer = null;
   function triggerAutoCloudSync() {
     if (!cloudSettings.webAppUrl || !cloudSettings.autoSync) return;
+    updateCloudSyncUI('syncing');
     if (cloudAutoSyncTimer) clearTimeout(cloudAutoSyncTimer);
     cloudAutoSyncTimer = setTimeout(() => {
       syncToCloud('syncAll', null, false);
-    }, 800);
+    }, 350);
   }
 
-  function saveToLocalStorage() {
+  function saveToLocalStorage(triggerSync = true) {
     try {
       localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify(appSettings));
       localStorage.setItem(STORAGE_KEY_STUDENTS, JSON.stringify(students));
       localStorage.setItem(STORAGE_KEY_TRANSACTIONS, JSON.stringify(transactions));
-      triggerAutoCloudSync();
+      if (triggerSync) {
+        triggerAutoCloudSync();
+      }
     } catch (e) {
       console.error('Error saving to localStorage:', e);
       showToast('Error writing to storage', 'danger');
@@ -1594,15 +1603,17 @@
     if (pill) {
       pill.className = `cloud-sync-pill ${currentState}`;
       if (currentState === 'linked') {
-        if (label) label.textContent = 'Cloud Synced';
-        pill.title = 'Connected to Google Sheets & Excel Cloud API';
+        if (label) label.textContent = 'Database Saved';
+        pill.title = 'Connected to Google Sheets Database. All changes saved.';
       } else if (currentState === 'syncing') {
-        if (label) label.textContent = 'Syncing...';
+        if (label) label.textContent = 'Saving to Database...';
+        pill.title = 'Saving to Google Cloud Database...';
       } else if (currentState === 'error') {
-        if (label) label.textContent = 'Sync Error';
+        if (label) label.textContent = 'Database Offline';
+        pill.title = 'Could not reach cloud database. Data is saved locally in browser.';
       } else {
-        if (label) label.textContent = 'Cloud Sheet';
-        pill.title = 'Connect Google Sheets & Excel Cloud API';
+        if (label) label.textContent = 'Connect Database';
+        pill.title = 'Click to connect Google Sheets Database';
       }
     }
 
@@ -1610,24 +1621,24 @@
       banner.className = `cloud-status-banner ${currentState}`;
       if (currentState === 'linked') {
         if (statusEmoji) statusEmoji.textContent = '🟢';
-        if (statusTitle) statusTitle.textContent = 'Connected & Synced with Google Cloud';
+        if (statusTitle) statusTitle.textContent = 'Connected & Synced to Google Cloud Database';
         const lastTime = cloudSettings.lastSynced ? new Date(cloudSettings.lastSynced).toLocaleTimeString() : 'Just now';
-        if (statusDesc) statusDesc.textContent = `All clients, hours taught, debts, and Euro balances are automatically synced. Last sync: ${lastTime}`;
+        if (statusDesc) statusDesc.textContent = `All clients, lessons, debts, and Euro balances are saved directly to your Google Sheet. Last sync: ${lastTime}`;
         if (linksRow) linksRow.classList.remove('hidden');
         if (openSheetLink && cloudSettings.spreadsheetUrl) openSheetLink.href = cloudSettings.spreadsheetUrl;
         if (dlExcelLink && cloudSettings.excelExportUrl) dlExcelLink.href = cloudSettings.excelExportUrl;
       } else if (currentState === 'syncing') {
         if (statusEmoji) statusEmoji.textContent = '🔄';
-        if (statusTitle) statusTitle.textContent = 'Synchronizing with Google Cloud...';
-        if (statusDesc) statusDesc.textContent = 'Saving client records, lesson sessions, and balance sheets...';
+        if (statusTitle) statusTitle.textContent = 'Synchronizing with Database...';
+        if (statusDesc) statusDesc.textContent = 'Updating client records and calendar in Google Cloud...';
       } else if (currentState === 'error') {
         if (statusEmoji) statusEmoji.textContent = '⚠️';
-        if (statusTitle) statusTitle.textContent = 'Connection or Permission Issue';
-        if (statusDesc) statusDesc.textContent = 'Unable to reach the Google Apps Script Web App. Please ensure "Who has access: Anyone" is selected in your deployment.';
+        if (statusTitle) statusTitle.textContent = 'Database Connection Notice';
+        if (statusDesc) statusDesc.textContent = 'Your data is safely stored in your browser and will automatically retry syncing to the Google database.';
       } else {
         if (statusEmoji) statusEmoji.textContent = '⚪';
-        if (statusTitle) statusTitle.textContent = 'Not Connected to Google Sheets';
-        if (statusDesc) statusDesc.textContent = 'Paste your deployed Google Apps Script Web App URL below to enable permanent, automatic cloud storage.';
+        if (statusTitle) statusTitle.textContent = 'Not Connected to Database';
+        if (statusDesc) statusDesc.textContent = 'Connect your Google Apps Script Web App URL below to enable permanent database storage.';
         if (linksRow) linksRow.classList.add('hidden');
       }
     }
@@ -1643,9 +1654,12 @@
         transactions: transactions
       };
 
-      // Send as text/plain to avoid browser CORS OPTIONS preflight check
+      // Primary: Send via POST with text/plain (avoids OPTIONS preflight, handles GAS 302 redirect)
       const res = await fetch(cloudSettings.webAppUrl, {
         method: 'POST',
+        mode: 'cors',
+        redirect: 'follow',
+        cache: 'no-store',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload)
       });
@@ -1658,17 +1672,45 @@
         saveCloudSettings();
         updateCloudSyncUI('linked');
         if (showFeedback) {
-          showToast('Synced with Google Sheet & Excel Cloud!', 'success');
+          showToast('Saved to Google Sheets Database ✓', 'success');
         }
         return data;
       } else {
         throw new Error((data && data.message) || 'Sync returned error');
       }
     } catch (err) {
-      console.warn('Cloud sync error:', err);
+      console.warn('Cloud sync POST error:', err);
+      // Fallback: try GET sync if payload size is reasonable
+      try {
+        const payload = customPayload || { action, students, transactions };
+        const payloadStr = encodeURIComponent(JSON.stringify(payload));
+        if (payloadStr.length < 6000) {
+          const sep = cloudSettings.webAppUrl.includes('?') ? '&' : '?';
+          const fallbackRes = await fetch(`${cloudSettings.webAppUrl}${sep}action=syncAll&payload=${payloadStr}&t=${Date.now()}`, {
+            method: 'GET',
+            mode: 'cors',
+            redirect: 'follow',
+            cache: 'no-store'
+          });
+          const fallbackData = await fallbackRes.json();
+          if (fallbackData && fallbackData.status === 'success') {
+            cloudSettings.lastSynced = new Date().toISOString();
+            if (fallbackData.spreadsheetUrl) cloudSettings.spreadsheetUrl = fallbackData.spreadsheetUrl;
+            if (fallbackData.excelExportUrl) cloudSettings.excelExportUrl = fallbackData.excelExportUrl;
+            saveCloudSettings();
+            updateCloudSyncUI('linked');
+            if (showFeedback) {
+              showToast('Saved to Google Sheets Database ✓', 'success');
+            }
+            return fallbackData;
+          }
+        }
+      } catch (fallbackErr) {
+        console.warn('Cloud sync GET fallback error:', fallbackErr);
+      }
       updateCloudSyncUI('error');
       if (showFeedback) {
-        showToast('Could not sync to cloud: ' + err.message, 'danger');
+        showToast('Saved locally. Database sync will retry.', 'warning');
       }
       return null;
     }
@@ -1679,26 +1721,31 @@
     try {
       updateCloudSyncUI('syncing');
       const sep = cloudSettings.webAppUrl.includes('?') ? '&' : '?';
-      const res = await fetch(`${cloudSettings.webAppUrl}${sep}action=read&t=${Date.now()}`);
+      const res = await fetch(`${cloudSettings.webAppUrl}${sep}action=read&t=${Date.now()}`, {
+        method: 'GET',
+        mode: 'cors',
+        redirect: 'follow',
+        cache: 'no-store'
+      });
       const data = await res.json();
 
       if (data && data.status === 'success') {
-        if (Array.isArray(data.students) && data.students.length > 0) {
+        if (Array.isArray(data.students)) {
           students = data.students;
         }
-        if (Array.isArray(data.transactions) && data.transactions.length > 0) {
+        if (Array.isArray(data.transactions)) {
           transactions = data.transactions;
         }
         if (data.spreadsheetUrl) cloudSettings.spreadsheetUrl = data.spreadsheetUrl;
         if (data.excelExportUrl) cloudSettings.excelExportUrl = data.excelExportUrl;
         cloudSettings.lastSynced = new Date().toISOString();
 
-        saveToLocalStorage();
+        saveToLocalStorage(false); // pass false so we do not re-trigger sync
         saveCloudSettings();
         renderAll();
         updateCloudSyncUI('linked');
         if (showFeedback) {
-          showToast('Updated data from Google Cloud Sheet!', 'success');
+          showToast('Updated data from Google Database!', 'success');
         }
         return data;
       } else {
@@ -1708,7 +1755,7 @@
       console.warn('Fetch from cloud error:', err);
       updateCloudSyncUI('error');
       if (showFeedback) {
-        showToast('Could not fetch from cloud spreadsheet.', 'danger');
+        showToast('Could not fetch from database. Using local copy.', 'warning');
       }
       return null;
     }
