@@ -15,13 +15,17 @@
   // Fixed Currency: Strictly Euro
   const CURRENCY_SYMBOL = '€';
 
+  // Built-in Google Apps Script Cloud Database Endpoint (/exec)
+  // Once deployed, this URL acts as the seamless background database for all users
+  const BUILTIN_BACKEND_URL = '';
+
   // App State
   let appSettings = {
     theme: 'dark'
   };
 
   let cloudSettings = {
-    webAppUrl: '',
+    webAppUrl: BUILTIN_BACKEND_URL || '',
     spreadsheetUrl: '',
     excelExportUrl: '',
     lastSynced: null,
@@ -97,6 +101,7 @@
 
       const savedCloud = localStorage.getItem(STORAGE_KEY_CLOUD);
       if (savedCloud) cloudSettings = Object.assign(cloudSettings, JSON.parse(savedCloud));
+      if (BUILTIN_BACKEND_URL) cloudSettings.webAppUrl = BUILTIN_BACKEND_URL;
 
       const savedStudents = localStorage.getItem(STORAGE_KEY_STUDENTS);
       if (savedStudents) students = JSON.parse(savedStudents);
