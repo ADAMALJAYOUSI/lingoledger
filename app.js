@@ -82,11 +82,7 @@
     setupEventListeners();
     setupSwipeGestures();
 
-    if (students.length === 0) {
-      loadSampleDataset(false);
-    } else {
-      renderAll();
-    }
+    renderAll();
 
     // If cloud is connected, check for remote updates in background
     if (cloudSettings.webAppUrl) {
