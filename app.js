@@ -81,21 +81,54 @@
   // INITIALIZATION
   // ==========================================
 
-  function initApp() {
+  function showLoadingScreen(statusText = 'Connecting to Live Database...') {
+    const screen = document.getElementById('appLoadingScreen');
+    const text = document.getElementById('loadingStatusText');
+    if (text) text.textContent = statusText;
+    if (screen) {
+      screen.classList.remove('fade-out');
+    }
+  }
+
+  function hideLoadingScreen() {
+    const screen = document.getElementById('appLoadingScreen');
+    if (screen) {
+      screen.classList.add('fade-out');
+    }
+  }
+
+  async function initApp() {
     loadFromLocalStorage();
     setupTheme();
-    updateCloudSyncUI('linked');
+    updateCloudSyncUI('syncing');
     setupEventListeners();
     setupSwipeGestures();
 
-    // Render 100% instantly from cache (0ms delay)
+    // Render local view
     renderAll();
 
-    // Check for remote database updates silently in the background without blocking the UI
+    // If cloud database is configured, block interaction with loading screen until database is fetched
     if (cloudSettings.webAppUrl) {
-      setTimeout(() => {
-        fetchFromCloud(false);
-      }, 150);
+      showLoadingScreen('Connecting to Live Database...');
+
+      // Safety timeout: unlock UI after 5 seconds if connection is slow/offline
+      const safetyTimer = setTimeout(() => {
+        hideLoadingScreen();
+        updateCloudSyncUI('linked');
+      }, 5000);
+
+      try {
+        await fetchFromCloud(false);
+      } catch (err) {
+        console.warn('Initial cloud database fetch failed:', err);
+      } finally {
+        clearTimeout(safetyTimer);
+        hideLoadingScreen();
+        updateCloudSyncUI('linked');
+      }
+    } else {
+      hideLoadingScreen();
+      updateCloudSyncUI('linked');
     }
   }
 

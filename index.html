@@ -16,6 +16,25 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
+  <!-- Global App Loading Screen (Prevents clicks before database is loaded) -->
+  <div id="appLoadingScreen" class="app-loading-screen" aria-live="polite">
+    <div class="loading-content-card">
+      <div class="loading-brand-icon">
+        <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+          <line x1="16" y1="2" x2="16" y2="6"></line>
+          <line x1="8" y1="2" x2="8" y2="6"></line>
+          <line x1="3" y1="10" x2="21" y2="10"></line>
+          <path d="m9 16 2 2 4-4"></path>
+        </svg>
+      </div>
+      <h2 class="loading-brand-title">LingoLedger</h2>
+      <div class="loading-spinner-ring"></div>
+      <p id="loadingStatusText" class="loading-status-text">Connecting to Live Database...</p>
+      <span class="loading-subtext">Loading clients, calendar &amp; Euro balances</span>
+    </div>
+  </div>
+
   <div class="app-layout">
     <!-- Top Navigation Bar -->
     <header class="top-nav" id="mainNavbar">
