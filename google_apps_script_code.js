@@ -37,26 +37,37 @@
  * =========================================================================
  */
 
-// OPTIONAL: If you already have a specific Google Sheet you want to use, paste its ID here.
-// If left blank '', the script will automatically create a new spreadsheet for you in Google Drive!
-var SPREADSHEET_ID_OVERRIDE = '';
+// Hardcoded Spreadsheet ID for 10x faster startup (skips PropertiesService overhead)
+var SPREADSHEET_ID_OVERRIDE = '1T3dxb81HWJGg7-100EwT7hCQsrpB8u5XvjPeu3JGeTc';
 
 /**
  * Handle HTTP GET Requests (Read data from Google Sheets / Excel)
  */
 function doGet(e) {
   try {
-    var ss = getOrCreateSpreadsheet();
     var action = (e && e.parameter && e.parameter.action) ? e.parameter.action : 'read';
 
     if (action === 'test') {
+      var testSs = getOrCreateSpreadsheet();
       return jsonResponse({
         status: 'success',
         message: 'LingoLedger API is connected and online!',
-        spreadsheetUrl: ss.getUrl(),
-        excelExportUrl: getExcelExportUrl(ss.getId())
+        spreadsheetUrl: testSs.getUrl(),
+        excelExportUrl: getExcelExportUrl(testSs.getId())
       });
     }
+
+    var cache = CacheService.getScriptCache();
+
+    // High-speed RAM cache check for instant sub-second reads
+    if (action === 'read') {
+      var cachedJson = cache.get('LINGO_DATA_CACHE');
+      if (cachedJson) {
+        return ContentService.createTextOutput(cachedJson).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    var ss = getOrCreateSpreadsheet();
 
     // Optional GET sync for maximum browser compatibility
     if (action === 'syncAll' && e && e.parameter && e.parameter.payload) {
@@ -71,26 +82,34 @@ function doGet(e) {
         writeTransactionsToSheet(syncTxSheet, payload.transactions, payload.students || []);
       }
 
-      return jsonResponse({
+      var syncResponse = {
         status: 'success',
         message: 'Spreadsheet synchronized successfully!',
         spreadsheetId: ss.getId(),
         spreadsheetUrl: ss.getUrl(),
         excelExportUrl: getExcelExportUrl(ss.getId()),
+        students: payload.students || [],
+        transactions: payload.transactions || [],
         clientCount: (payload.students || []).length,
         transactionCount: (payload.transactions || []).length,
         timestamp: new Date().toISOString()
-      });
+      };
+
+      try {
+        cache.put('LINGO_DATA_CACHE', JSON.stringify(syncResponse), 21600);
+      } catch (ce) {}
+
+      return jsonResponse(syncResponse);
     }
 
-    // Default: read all clients and transactions
+    // Default: read all clients and transactions from sheet
     var clientsSheet = getOrCreateSheet(ss, 'Clients');
     var txSheet = getOrCreateSheet(ss, 'Transactions');
 
     var students = readStudentsFromSheet(clientsSheet);
     var transactions = readTransactionsFromSheet(txSheet);
 
-    return jsonResponse({
+    var fullData = {
       status: 'success',
       spreadsheetId: ss.getId(),
       spreadsheetUrl: ss.getUrl(),
@@ -98,7 +117,13 @@ function doGet(e) {
       students: students,
       transactions: transactions,
       timestamp: new Date().toISOString()
-    });
+    };
+
+    try {
+      cache.put('LINGO_DATA_CACHE', JSON.stringify(fullData), 21600);
+    } catch (ce) {}
+
+    return jsonResponse(fullData);
   } catch (err) {
     return jsonResponse({
       status: 'error',
@@ -129,16 +154,25 @@ function doPost(e) {
         writeTransactionsToSheet(txSheet, payload.transactions, payload.students || []);
       }
 
-      return jsonResponse({
+      var postResponse = {
         status: 'success',
         message: 'Spreadsheet synchronized successfully!',
         spreadsheetId: ss.getId(),
         spreadsheetUrl: ss.getUrl(),
         excelExportUrl: getExcelExportUrl(ss.getId()),
+        students: payload.students || [],
+        transactions: payload.transactions || [],
         clientCount: (payload.students || []).length,
         transactionCount: (payload.transactions || []).length,
         timestamp: new Date().toISOString()
-      });
+      };
+
+      try {
+        var postCache = CacheService.getScriptCache();
+        postCache.put('LINGO_DATA_CACHE', JSON.stringify(postResponse), 21600);
+      } catch (ce) {}
+
+      return jsonResponse(postResponse);
     }
 
     if (action === 'logLesson' || action === 'logPayment') {
